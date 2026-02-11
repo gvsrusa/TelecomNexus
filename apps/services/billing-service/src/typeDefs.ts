@@ -1,0 +1,143 @@
+import gql from 'graphql-tag';
+
+export const typeDefs = gql`
+  extend schema
+    @link(
+      url: "https://specs.apollo.dev/federation/v2.0"
+      import: ["@key", "@shareable", "@external"]
+    )
+
+  scalar DateTime
+
+  type Customer @key(fields: "customerId") {
+    customerId: ID! @external
+    invoices(status: InvoiceStatus, limit: Int): [Invoice!]!
+    payments(limit: Int): [Payment!]!
+    currentUsage: UsageSummary!
+    usageByDay(month: String!): [DailyUsage!]!
+    callHistory(month: String!, first: Int, after: String): CDRConnection!
+    autoPayEnabled: Boolean!
+  }
+
+  type Query {
+    invoice(invoiceNumber: String!): Invoice
+  }
+
+  type Mutation {
+    payInvoice(
+      invoiceNumber: String!
+      method: PaymentMethod!
+      idempotencyKey: String!
+    ): PaymentResult!
+    toggleAutoPay(customerId: ID!, enabled: Boolean!): Customer!
+  }
+
+  type Invoice {
+    invoiceNumber: String!
+    billingPeriod: BillingPeriod!
+    lineItems: [LineItem!]!
+    totalAmount: Float!
+    currency: String!
+    status: InvoiceStatus!
+    dueDate: DateTime!
+    paidAt: DateTime
+  }
+
+  type BillingPeriod {
+    start: DateTime!
+    end: DateTime!
+  }
+
+  type LineItem {
+    description: String!
+    category: String!
+    amount: Float!
+  }
+
+  type Payment {
+    paymentId: String!
+    invoiceNumber: String!
+    amount: Float!
+    method: PaymentMethod!
+    status: String!
+    transactionRef: String!
+    processedAt: DateTime!
+  }
+
+  type CDRConnection {
+    edges: [CDREdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+  }
+
+  type CDREdge {
+    node: CallDetailRecord!
+    cursor: String!
+  }
+
+  type PageInfo {
+    hasNextPage: Boolean!
+    hasPreviousPage: Boolean!
+    startCursor: String
+    endCursor: String
+  }
+
+  type CallDetailRecord {
+    callId: ID!
+    timestamp: DateTime!
+    fromNumber: String!
+    toNumber: String!
+    durationSeconds: Int!
+    callType: CallType!
+    status: CallStatus!
+  }
+
+  type DailyUsage {
+    date: String!
+    dataUsedMB: Int!
+    voiceUsedSeconds: Int!
+    smsCount: Int!
+  }
+
+  type UsageSummary {
+    dataUsedGB: Float!
+    dataLimitGB: Float
+    voiceUsedMinutes: Int!
+    voiceLimitMinutes: Int
+    smsCount: Int!
+    smsLimit: Int
+    billingCycleStart: DateTime!
+    billingCycleEnd: DateTime!
+  }
+
+  type PaymentResult {
+    success: Boolean!
+    payment: Payment
+    errorMessage: String
+  }
+
+  enum InvoiceStatus {
+    DRAFT
+    DUE
+    PAID
+    OVERDUE
+  }
+
+  enum PaymentMethod {
+    CREDIT_CARD
+    BANK_TRANSFER
+    DIGITAL_WALLET
+  }
+
+  enum CallType {
+    VOICE
+    VIDEO
+    VOIP
+  }
+
+  enum CallStatus {
+    COMPLETED
+    MISSED
+    DROPPED
+  }
+`;

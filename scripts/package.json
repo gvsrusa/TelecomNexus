@@ -1,0 +1,17 @@
+{
+  "name": "@telecom-nexus/seed",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "seed": "tsx seed-mongo.ts && tsx seed-cassandra.ts"
+  },
+  "dependencies": {
+    "cassandra-driver": "^4.7.2",
+    "mongoose": "^8.9.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

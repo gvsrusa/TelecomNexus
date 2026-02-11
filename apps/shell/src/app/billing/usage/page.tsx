@@ -1,0 +1,287 @@
+'use client';
+
+import { useQuery, gql } from '@apollo/client';
+import { Card, Row, Col, Form } from 'react-bootstrap';
+import { useState } from 'react';
+import { useAuth } from '@/lib/auth-context';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from 'recharts';
+
+const GET_USAGE = gql`
+  query GetUsage($customerId: ID!, $month: String!) {
+    currentUsage(customerId: $customerId) {
+      totalDataMB
+      totalVoiceMinutes
+      totalSMS
+    }
+    dailyUsage(customerId: $customerId, month: $month) {
+      date
+      dataMB
+      voiceMinutes
+      smsCount
+    }
+    customer(customerId: $customerId) {
+      customerId
+      activePlan {
+        features {
+          dataLimitGB
+          voiceMinutes
+          smsLimit
+        }
+      }
+    }
+  }
+`;
+
+interface DailyUsage {
+  date: string;
+  dataMB: number;
+  voiceMinutes: number;
+  smsCount: number;
+}
+
+export default function UsagePage() {
+  const { customerId } = useAuth();
+  const now = new Date();
+  const [month, setMonth] = useState(
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+  );
+
+  const { data, loading } = useQuery(GET_USAGE, {
+    variables: { customerId, month },
+  });
+
+  const currentUsage = data?.currentUsage;
+  const daily: DailyUsage[] = data?.dailyUsage ?? [];
+  const plan = data?.customer?.activePlan;
+  const dataLimitMB = (plan?.features?.dataLimitGB ?? 50) * 1024;
+
+  // Chart data
+  const chartData = daily.map((d) => ({
+    date: new Date(d.date).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+    data: Math.round(d.dataMB),
+    voice: d.voiceMinutes,
+    sms: d.smsCount,
+  }));
+
+  // Calculate percentages
+  const dataUsedGB = (currentUsage?.totalDataMB ?? 0) / 1024;
+  const dataLimitGB = plan?.features?.dataLimitGB ?? 50;
+  const dataPct = Math.min(100, (dataUsedGB / dataLimitGB) * 100);
+  const voicePct = Math.min(
+    100,
+    ((currentUsage?.totalVoiceMinutes ?? 0) / (plan?.features?.voiceMinutes ?? 1000)) * 100,
+  );
+  const smsPct = Math.min(
+    100,
+    ((currentUsage?.totalSMS ?? 0) / (plan?.features?.smsLimit ?? 5000)) * 100,
+  );
+
+  // Generate month options
+  const monthOptions = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    return {
+      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      label: d.toLocaleDateString([], { year: 'numeric', month: 'long' }),
+    };
+  });
+
+  return (
+    <div>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h3 className="fw-bold mb-0">Usage Analytics</h3>
+        <Form.Select
+          size="sm"
+          style={{ maxWidth: 200 }}
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+        >
+          {monthOptions.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
+            </option>
+          ))}
+        </Form.Select>
+      </div>
+
+      {loading ? (
+        <div className="d-flex justify-content-center py-5">
+          <div className="spinner-border text-primary" />
+        </div>
+      ) : (
+        <>
+          {/* Usage Summary Cards */}
+          <Row className="g-3 mb-4">
+            {[
+              {
+                label: 'Data',
+                used: `${dataUsedGB.toFixed(1)} GB`,
+                limit: `${dataLimitGB} GB`,
+                pct: dataPct,
+                color: dataPct > 80 ? '#DC3545' : '#0066CC',
+              },
+              {
+                label: 'Voice',
+                used: `${currentUsage?.totalVoiceMinutes ?? 0} min`,
+                limit: `${plan?.features?.voiceMinutes ?? 0} min`,
+                pct: voicePct,
+                color: voicePct > 80 ? '#DC3545' : '#6C63FF',
+              },
+              {
+                label: 'SMS',
+                used: `${currentUsage?.totalSMS ?? 0}`,
+                limit: `${plan?.features?.smsLimit ?? 0}`,
+                pct: smsPct,
+                color: smsPct > 80 ? '#DC3545' : '#28A745',
+              },
+            ].map((u) => (
+              <Col key={u.label} md={4}>
+                <Card className="border-0 shadow-sm h-100">
+                  <Card.Body className="text-center">
+                    {/* Circular progress */}
+                    <div className="position-relative d-inline-block mb-3">
+                      <svg width="100" height="100" viewBox="0 0 100 100">
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="42"
+                          fill="none"
+                          stroke="#e9ecef"
+                          strokeWidth="8"
+                        />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="42"
+                          fill="none"
+                          stroke={u.color}
+                          strokeWidth="8"
+                          strokeDasharray={`${(u.pct / 100) * 264} 264`}
+                          strokeLinecap="round"
+                          transform="rotate(-90 50 50)"
+                        />
+                        <text
+                          x="50"
+                          y="50"
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          fontSize="16"
+                          fontWeight="bold"
+                          fill={u.color}
+                        >
+                          {Math.round(u.pct)}%
+                        </text>
+                      </svg>
+                    </div>
+                    <h5 className="mb-1">{u.label}</h5>
+                    <div className="fw-bold">{u.used}</div>
+                    <small className="text-muted">of {u.limit}</small>
+                  </Card.Body>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+
+          {/* Daily Data Usage Chart */}
+          <Card className="border-0 shadow-sm mb-4">
+            <Card.Body>
+              <h6 className="fw-bold mb-3">Daily Data Usage (MB)</h6>
+              {chartData.length === 0 ? (
+                <p className="text-muted text-center py-4">No usage data for this period</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <AreaChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <ReferenceLine
+                      y={dataLimitMB / 30}
+                      stroke="#DC3545"
+                      strokeDasharray="5 5"
+                      label={{ value: 'Daily Avg Limit', fill: '#DC3545', fontSize: 10 }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="data"
+                      stroke="#0066CC"
+                      fill="#0066CC"
+                      fillOpacity={0.2}
+                      name="Data (MB)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </Card.Body>
+          </Card>
+
+          {/* Voice & SMS Charts */}
+          <Row className="g-3">
+            <Col md={6}>
+              <Card className="border-0 shadow-sm">
+                <Card.Body>
+                  <h6 className="fw-bold mb-3">Voice Minutes</h6>
+                  {chartData.length === 0 ? (
+                    <p className="text-muted text-center py-4">No data</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={180}>
+                      <AreaChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip />
+                        <Area
+                          type="monotone"
+                          dataKey="voice"
+                          stroke="#6C63FF"
+                          fill="#6C63FF"
+                          fillOpacity={0.2}
+                          name="Voice (min)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={6}>
+              <Card className="border-0 shadow-sm">
+                <Card.Body>
+                  <h6 className="fw-bold mb-3">SMS Count</h6>
+                  {chartData.length === 0 ? (
+                    <p className="text-muted text-center py-4">No data</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={180}>
+                      <AreaChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip />
+                        <Area
+                          type="monotone"
+                          dataKey="sms"
+                          stroke="#28A745"
+                          fill="#28A745"
+                          fillOpacity={0.2}
+                          name="SMS"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        </>
+      )}
+    </div>
+  );
+}

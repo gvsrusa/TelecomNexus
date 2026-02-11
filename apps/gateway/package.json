@@ -9,7 +9,18 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@apollo/gateway": "^2.9.3",
+    "@apollo/server": "^4.11.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.2.1",
+    "graphql": "^16.9.0",
+    "graphql-depth-limit": "^1.1.0"
+  },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "@types/node": "^22.10.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"

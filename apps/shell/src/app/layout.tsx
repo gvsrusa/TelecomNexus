@@ -1,11 +1,19 @@
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+import type { Metadata } from 'next';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import './globals.css';
+import { Providers } from './providers';
+
+export const metadata: Metadata = {
+  title: 'TelecomNexus',
+  description: 'Enterprise Telecom Platform Demo',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

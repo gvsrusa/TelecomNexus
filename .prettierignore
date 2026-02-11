@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.next/
+coverage/
+test-results/
+playwright-report/
+.turbo/
+packages/graphql-schema/src/__generated__/
+*.min.js
+package-lock.json

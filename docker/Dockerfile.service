@@ -1,0 +1,67 @@
+# Parameterized Dockerfile for backend services
+# Build: docker build --build-arg SERVICE=customer-service -f docker/Dockerfile.service .
+ARG NODE_VERSION=22
+
+FROM node:${NODE_VERSION}-alpine AS base
+WORKDIR /app
+RUN corepack enable
+
+# Install dependencies
+FROM base AS deps
+COPY package.json package-lock.json ./
+COPY packages/types/package.json ./packages/types/
+COPY packages/graphql-schema/package.json ./packages/graphql-schema/
+COPY packages/config/package.json ./packages/config/
+COPY packages/xml-utils/package.json ./packages/xml-utils/
+
+ARG SERVICE
+COPY apps/services/${SERVICE}/package.json ./apps/services/${SERVICE}/
+
+RUN npm ci --workspace=packages/types \
+    --workspace=packages/graphql-schema \
+    --workspace=packages/config \
+    --workspace=packages/xml-utils \
+    --workspace=apps/services/${SERVICE}
+
+# Build
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/types/node_modules ./packages/types/node_modules
+COPY --from=deps /app/packages/graphql-schema/node_modules ./packages/graphql-schema/node_modules
+COPY --from=deps /app/packages/xml-utils/node_modules ./packages/xml-utils/node_modules
+
+COPY packages/types/ ./packages/types/
+COPY packages/graphql-schema/ ./packages/graphql-schema/
+COPY packages/config/ ./packages/config/
+COPY packages/xml-utils/ ./packages/xml-utils/
+COPY tsconfig.base.json ./
+
+ARG SERVICE
+COPY apps/services/${SERVICE}/ ./apps/services/${SERVICE}/
+
+WORKDIR /app/packages/types
+RUN npx tsc || true
+WORKDIR /app/packages/graphql-schema
+RUN npx tsc || true
+WORKDIR /app/packages/xml-utils
+RUN npx tsc || true
+
+ARG SERVICE
+WORKDIR /app/apps/services/${SERVICE}
+RUN npx tsc || true
+
+# Production
+FROM base AS runner
+ENV NODE_ENV=production
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/ ./packages/
+COPY --from=builder /app/tsconfig.base.json ./
+
+ARG SERVICE
+COPY --from=builder /app/apps/services/${SERVICE}/ ./apps/services/${SERVICE}/
+
+WORKDIR /app/apps/services/${SERVICE}
+
+EXPOSE 4001
+CMD ["node", "dist/index.js"]

@@ -10,12 +10,13 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "test:e2e": "turbo run test:e2e",
+    "test:e2e": "playwright test",
     "seed": "turbo run seed",
     "codegen": "turbo run codegen",
     "prepare": "husky"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
     "turbo": "^2.3.3"
@@ -23,14 +24,15 @@
   "workspaces": [
     "apps/*",
     "apps/services/*",
-    "packages/*"
+    "packages/*",
+    "scripts"
   ],
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md}": [
-      "prettier --write"
+      "prettier --write --ignore-unknown"
     ],
     "*.{ts,tsx,js,jsx}": [
-      "eslint --fix"
+      "eslint --fix --no-error-on-unmatched-pattern"
     ]
   },
   "engines": {

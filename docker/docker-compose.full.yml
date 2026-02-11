@@ -1,0 +1,205 @@
+# Full-stack Docker Compose for TelecomNexus
+# Usage: docker compose -f docker/docker-compose.full.yml up -d
+#
+# Starts: MongoDB, Cassandra, 3 backend services, Apollo Gateway, Shell app
+# First run will initialize databases and seed demo data.
+
+services:
+  # ─── Databases ───────────────────────────────────────────────
+
+  mongo:
+    image: mongo:8
+    container_name: tn-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    environment:
+      MONGO_INITDB_DATABASE: telecom_nexus
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - telecom-network
+
+  cassandra:
+    image: cassandra:5
+    container_name: tn-cassandra
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+    environment:
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 128M
+      CASSANDRA_CLUSTER_NAME: TelecomCluster
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 90s
+    networks:
+      - telecom-network
+
+  cassandra-init:
+    image: cassandra:5
+    container_name: tn-cassandra-init
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    volumes:
+      - ./cassandra-init:/scripts
+    entrypoint: ["/bin/bash", "/scripts/init.sh"]
+    environment:
+      CASSANDRA_HOST: cassandra
+      CASSANDRA_PORT: 9042
+      SCRIPT_DIR: /scripts
+    networks:
+      - telecom-network
+
+  # ─── Backend Services ────────────────────────────────────────
+
+  customer-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.service
+      args:
+        SERVICE: customer-service
+    container_name: tn-customer-service
+    ports:
+      - "4001:4001"
+    environment:
+      PORT: 4001
+      MONGODB_URI: mongodb://mongo:27017/telecom_nexus
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - telecom-network
+
+  network-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.service
+      args:
+        SERVICE: network-service
+    container_name: tn-network-service
+    ports:
+      - "4002:4002"
+    environment:
+      PORT: 4002
+      MONGODB_URI: mongodb://mongo:27017/telecom_nexus
+      CASSANDRA_CONTACT_POINTS: cassandra
+      CASSANDRA_PORT: 9042
+    depends_on:
+      mongo:
+        condition: service_healthy
+      cassandra:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4002/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - telecom-network
+
+  billing-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.service
+      args:
+        SERVICE: billing-service
+    container_name: tn-billing-service
+    ports:
+      - "4003:4003"
+    environment:
+      PORT: 4003
+      MONGODB_URI: mongodb://mongo:27017/telecom_nexus
+      CASSANDRA_CONTACT_POINTS: cassandra
+      CASSANDRA_PORT: 9042
+    depends_on:
+      mongo:
+        condition: service_healthy
+      cassandra:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4003/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - telecom-network
+
+  # ─── Apollo Gateway ──────────────────────────────────────────
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.gateway
+    container_name: tn-gateway
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      CUSTOMER_SERVICE_URL: http://customer-service:4001/graphql
+      NETWORK_SERVICE_URL: http://network-service:4002/graphql
+      BILLING_SERVICE_URL: http://billing-service:4003/graphql
+    depends_on:
+      customer-service:
+        condition: service_healthy
+      network-service:
+        condition: service_healthy
+      billing-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - telecom-network
+
+  # ─── Frontend Shell ──────────────────────────────────────────
+  # Note: For the full Docker deployment, the shell is built with
+  # NEXT_PUBLIC_GATEWAY_URL pointing to the gateway container.
+  # For local dev, use `npx turbo run dev` instead.
+
+  # shell:
+  #   build:
+  #     context: ..
+  #     dockerfile: docker/Dockerfile.frontend
+  #     args:
+  #       APP: shell
+  #   container_name: tn-shell
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     NEXT_PUBLIC_GATEWAY_URL: http://gateway:4000/graphql
+  #   depends_on:
+  #     gateway:
+  #       condition: service_healthy
+  #   networks:
+  #     - telecom-network
+
+volumes:
+  mongo-data:
+  cassandra-data:
+
+networks:
+  telecom-network:
+    driver: bridge

@@ -1,0 +1,72 @@
+# Dockerfile for Next.js frontend apps
+# Build: docker build --build-arg APP=shell -f docker/Dockerfile.frontend .
+ARG NODE_VERSION=22
+
+FROM node:${NODE_VERSION}-alpine AS base
+WORKDIR /app
+
+# Install dependencies
+FROM base AS deps
+COPY package.json package-lock.json ./
+COPY packages/types/package.json ./packages/types/
+COPY packages/graphql-schema/package.json ./packages/graphql-schema/
+COPY packages/config/package.json ./packages/config/
+COPY packages/ui/package.json ./packages/ui/
+COPY packages/xml-utils/package.json ./packages/xml-utils/
+
+ARG APP
+COPY apps/${APP}/package.json ./apps/${APP}/
+
+RUN npm ci --workspace=packages/types \
+    --workspace=packages/graphql-schema \
+    --workspace=packages/config \
+    --workspace=packages/ui \
+    --workspace=packages/xml-utils \
+    --workspace=apps/${APP}
+
+# Build
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+
+COPY packages/ ./packages/
+COPY tsconfig.base.json ./
+
+ARG APP
+COPY apps/${APP}/ ./apps/${APP}/
+
+# Build shared packages
+WORKDIR /app/packages/types
+RUN npx tsc || true
+WORKDIR /app/packages/graphql-schema
+RUN npx tsc || true
+WORKDIR /app/packages/ui
+RUN npx tsc || true
+WORKDIR /app/packages/xml-utils
+RUN npx tsc || true
+
+ARG APP
+WORKDIR /app/apps/${APP}
+
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build
+
+# Production
+FROM base AS runner
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+ARG APP
+COPY --from=builder /app/apps/${APP}/public ./apps/${APP}/public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/${APP}/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/${APP}/.next/static ./apps/${APP}/.next/static
+
+USER nextjs
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]
