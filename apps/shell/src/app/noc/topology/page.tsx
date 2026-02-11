@@ -2,7 +2,7 @@
 
 import { useQuery, gql } from '@apollo/client';
 import { Card, Row, Col, Badge, Offcanvas, ListGroup, Form } from 'react-bootstrap';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 const GET_DEVICES = gql`
   query GetDevices {
@@ -55,21 +55,73 @@ const DEVICE_ICONS: Record<string, string> = {
   FIBER_NODE: '\u{1F534}',
 };
 
+/**
+ * Deterministic hash for a string → number in [0, 1).
+ * Produces the same value every render, preventing node positions from jumping.
+ */
+function hashToFloat(str: string, seed = 0): number {
+  let h = seed | 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (h * 31 + str.charCodeAt(i)) | 0;
+  }
+  return ((h >>> 0) % 10000) / 10000;
+}
+
 export default function TopologyPage() {
   const { data, loading } = useQuery(GET_DEVICES, { pollInterval: 30000 });
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [regionFilter, setRegionFilter] = useState('ALL');
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Store computed positions so hit-testing matches what was drawn
+  const positionsRef = useRef(new Map<string, { x: number; y: number }>());
 
   const devices: Device[] = data?.devices ?? [];
-  const regions = [
-    'ALL',
-    ...Array.from(new Set(devices.map((d) => d.location?.region).filter(Boolean))),
-  ];
-  const filtered =
-    regionFilter === 'ALL' ? devices : devices.filter((d) => d.location?.region === regionFilter);
+  const regions = useMemo(
+    () => ['ALL', ...Array.from(new Set(devices.map((d) => d.location?.region).filter(Boolean)))],
+    [devices],
+  );
 
-  // Simple force-directed topology canvas rendering
+  // Memoize filtered list by device IDs + regionFilter so it doesn't recreate every render
+  const filteredIds = useMemo(() => {
+    const list =
+      regionFilter === 'ALL' ? devices : devices.filter((d) => d.location?.region === regionFilter);
+    return list.map((d) => d.deviceId);
+  }, [devices, regionFilter]);
+
+  const filtered = useMemo(
+    () => devices.filter((d) => filteredIds.includes(d.deviceId)),
+    [devices, filteredIds],
+  );
+
+  // Compute stable node positions whenever filtered list or canvas size changes
+  const computePositions = useCallback(
+    (width: number, height: number) => {
+      const positions = new Map<string, { x: number; y: number }>();
+      if (filtered.length === 0) return positions;
+
+      const cols = Math.ceil(Math.sqrt(filtered.length));
+      const rows = Math.ceil(filtered.length / cols);
+      const cellW = width / (cols + 1);
+      const cellH = height / (rows + 1);
+
+      filtered.forEach((device, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        // Deterministic jitter based on deviceId — stable across re-renders
+        const jitterX = (hashToFloat(device.deviceId, 1) - 0.5) * cellW * 0.3;
+        const jitterY = (hashToFloat(device.deviceId, 2) - 0.5) * cellH * 0.3;
+        positions.set(device.deviceId, {
+          x: (col + 1) * cellW + jitterX,
+          y: (row + 1) * cellH + jitterY,
+        });
+      });
+
+      return positions;
+    },
+    [filtered],
+  );
+
+  // Canvas drawing with stable positions
   const drawTopology = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || filtered.length === 0) return;
@@ -78,31 +130,20 @@ export default function TopologyPage() {
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Assign positions using simple grid layout with jitter
-    const nodePositions = new Map<string, { x: number; y: number }>();
-    const cols = Math.ceil(Math.sqrt(filtered.length));
-    const cellW = canvas.width / (cols + 1);
-    const cellH = canvas.height / (Math.ceil(filtered.length / cols) + 1);
-
-    filtered.forEach((device, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const jitterX = (Math.random() - 0.5) * cellW * 0.3;
-      const jitterY = (Math.random() - 0.5) * cellH * 0.3;
-      nodePositions.set(device.deviceId, {
-        x: (col + 1) * cellW + jitterX,
-        y: (row + 1) * cellH + jitterY,
-      });
-    });
+    const nodePositions = computePositions(rect.width, rect.height);
+    positionsRef.current = nodePositions;
 
     // Clear
     ctx.fillStyle = '#1a1d21';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, rect.width, rect.height);
 
     // Draw connections
+    ctx.setLineDash([]);
     filtered.forEach((device) => {
       const pos = nodePositions.get(device.deviceId);
       if (!pos) return;
@@ -139,6 +180,7 @@ export default function TopologyPage() {
       ctx.fill();
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 2;
+      ctx.setLineDash([]);
       ctx.stroke();
 
       // Label
@@ -147,13 +189,23 @@ export default function TopologyPage() {
       ctx.textAlign = 'center';
       ctx.fillText(device.name.substring(0, 12), pos.x, pos.y + radius + 14);
     });
-  }, [filtered]);
+  }, [filtered, computePositions]);
 
+  // Draw on data change & observe container resize
   useEffect(() => {
     drawTopology();
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const observer = new ResizeObserver(() => {
+      drawTopology();
+    });
+    observer.observe(canvas);
+    return () => observer.disconnect();
   }, [drawTopology]);
 
-  // Handle canvas click to select device
+  // Handle canvas click — uses the same positions that were drawn
   const handleCanvasClick = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const canvas = canvasRef.current;
@@ -162,18 +214,10 @@ export default function TopologyPage() {
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
-      // Simple hit test
-      const cols = Math.ceil(Math.sqrt(filtered.length));
-      const cellW = canvas.width / (cols + 1);
-      const cellH = canvas.height / (Math.ceil(filtered.length / cols) + 1);
-
       for (const device of filtered) {
-        const i = filtered.indexOf(device);
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        const nodeX = (col + 1) * cellW;
-        const nodeY = (row + 1) * cellH;
-        const dist = Math.sqrt((x - nodeX) ** 2 + (y - nodeY) ** 2);
+        const pos = positionsRef.current.get(device.deviceId);
+        if (!pos) continue;
+        const dist = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
         if (dist < 20) {
           setSelectedDevice(device);
           return;
@@ -257,7 +301,7 @@ export default function TopologyPage() {
             <canvas
               ref={canvasRef}
               onClick={handleCanvasClick}
-              style={{ width: '100%', height: 500, cursor: 'pointer' }}
+              style={{ display: 'block', width: '100%', height: 500, cursor: 'pointer' }}
             />
           )}
         </Card.Body>

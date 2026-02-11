@@ -146,9 +146,12 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
           className="d-none d-lg-flex flex-column border-end bg-body-tertiary"
           style={{
             width: sidebarWidth,
+            minWidth: sidebarWidth,
+            flexShrink: 0,
             minHeight: 'calc(100vh - 72px)',
-            transition: 'width 200ms ease',
-            overflow: 'hidden',
+            transition: 'width 200ms ease, min-width 200ms ease',
+            overflowX: 'hidden',
+            overflowY: 'auto',
           }}
         >
           <Nav className="flex-column p-2 gap-1">
