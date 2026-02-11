@@ -14,6 +14,7 @@ const GET_CUSTOMER_OVERVIEW = gql`
       lastName
       accountStatus
       activePlan {
+        planCode
         name
         monthlyPrice
         features {

@@ -13,6 +13,7 @@ const GET_DASHBOARD = gql`
       lastName
       accountStatus
       activePlan {
+        planCode
         name
         monthlyPrice
         features {

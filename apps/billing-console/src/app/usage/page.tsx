@@ -32,6 +32,7 @@ const GET_USAGE = gql`
         smsCount
       }
       activePlan {
+        planCode
         features {
           dataLimitGB
           voiceMinutes

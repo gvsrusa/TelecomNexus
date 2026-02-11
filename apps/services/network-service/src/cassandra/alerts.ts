@@ -23,25 +23,26 @@ export async function getAlerts(filters: {
   const params: unknown[] = [];
 
   if (filters.deviceId) {
-    // Query specific device's alerts (current month and previous month)
+    // Query specific device's alerts (current and previous 2 months)
     const now = new Date();
-    const currentMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-    const prevDate = new Date(now);
-    prevDate.setUTCMonth(prevDate.getUTCMonth() - 1);
-    const prevMonth = `${prevDate.getUTCFullYear()}-${String(prevDate.getUTCMonth() + 1).padStart(2, '0')}`;
+    const months: string[] = [];
+    for (let m = 0; m < 3; m++) {
+      const d = new Date(now);
+      d.setUTCMonth(d.getUTCMonth() - m);
+      months.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
+    }
 
     query = `
       SELECT device_id, month, timestamp, alert_id, severity, status, title, description
       FROM alerts_by_device
-      WHERE device_id = ? AND month IN (?, ?)
+      WHERE device_id = ? AND month IN (?, ?, ?)
     `;
-    params.push(filters.deviceId, currentMonth, prevMonth);
+    params.push(filters.deviceId, ...months);
   } else {
-    // Broad query — use ALLOW FILTERING for demo
+    // Broad query — full table scan for demo (no WHERE clause needed)
     query = `
       SELECT device_id, month, timestamp, alert_id, severity, status, title, description
       FROM alerts_by_device
-      ALLOW FILTERING
     `;
   }
 

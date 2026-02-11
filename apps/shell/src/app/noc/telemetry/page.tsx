@@ -2,7 +2,7 @@
 
 import { useQuery, gql } from '@apollo/client';
 import { Card, Row, Col, Form, ButtonGroup, Button } from 'react-bootstrap';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   AreaChart,
   Area,
@@ -70,19 +70,29 @@ function getTimeRange(range: TimeRange): { start: string; end: string } {
 }
 
 export default function TelemetryPage() {
-  const [selectedDevice, setSelectedDevice] = useState('DEV-001');
+  const [selectedDevice, setSelectedDevice] = useState('');
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
 
   const { data: devicesData } = useQuery(GET_DEVICES);
+
+  // Auto-select first device once the device list loads
+  const devices = devicesData?.devices ?? [];
+  const effectiveDevice = selectedDevice || (devices.length > 0 ? devices[0].deviceId : '');
+
+  // Memoize the time range so it only changes when the user picks a new range
+  // (not on every render — getTimeRange() creates new Date objects each call,
+  // which would cause Apollo to see "changed" variables and re-fetch in a loop)
+  const timeRangeVars = useMemo(() => getTimeRange(timeRange), [timeRange]);
+
   const { data: telemetryData, loading } = useQuery(GET_TELEMETRY, {
     variables: {
-      deviceId: selectedDevice,
-      timeRange: getTimeRange(timeRange),
+      deviceId: effectiveDevice,
+      timeRange: timeRangeVars,
     },
+    skip: !effectiveDevice,
     pollInterval: 10000,
   });
 
-  const devices = devicesData?.devices ?? [];
   const readings: TelemetryPoint[] = telemetryData?.telemetry ?? [];
 
   // Format for charts
@@ -106,7 +116,7 @@ export default function TelemetryPage() {
           <Form.Select
             size="sm"
             style={{ maxWidth: 200 }}
-            value={selectedDevice}
+            value={effectiveDevice}
             onChange={(e) => setSelectedDevice(e.target.value)}
           >
             {devices.map((d: { deviceId: string; name: string }) => (

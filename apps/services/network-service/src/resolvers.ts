@@ -49,15 +49,20 @@ export const resolvers = {
       _: unknown,
       args: { deviceId: string; timeRange: { start: Date; end: Date } },
     ) => {
-      const start =
-        args.timeRange.start instanceof Date
-          ? args.timeRange.start
-          : new Date(args.timeRange.start as unknown as string);
-      const end =
-        args.timeRange.end instanceof Date
-          ? args.timeRange.end
-          : new Date(args.timeRange.end as unknown as string);
-      return getTelemetry(args.deviceId, start, end);
+      try {
+        const start =
+          args.timeRange.start instanceof Date
+            ? args.timeRange.start
+            : new Date(args.timeRange.start as unknown as string);
+        const end =
+          args.timeRange.end instanceof Date
+            ? args.timeRange.end
+            : new Date(args.timeRange.end as unknown as string);
+        return await getTelemetry(args.deviceId, start, end);
+      } catch (err) {
+        console.error('[network-service] Failed to fetch telemetry from Cassandra:', err);
+        return [];
+      }
     },
 
     alerts: async (
@@ -68,15 +73,25 @@ export const resolvers = {
         status?: string | undefined;
       },
     ) => {
-      return getAlerts({
-        deviceId: args.deviceId ?? undefined,
-        severity: args.severity ?? undefined,
-        status: args.status ?? undefined,
-      });
+      try {
+        return await getAlerts({
+          deviceId: args.deviceId ?? undefined,
+          severity: args.severity ?? undefined,
+          status: args.status ?? undefined,
+        });
+      } catch (err) {
+        console.error('[network-service] Failed to fetch alerts from Cassandra:', err);
+        return [];
+      }
     },
 
     alertsSummary: async () => {
-      return getAlertsSummary();
+      try {
+        return await getAlertsSummary();
+      } catch (err) {
+        console.error('[network-service] Failed to fetch alerts summary from Cassandra:', err);
+        return { critical: 0, major: 0, minor: 0, info: 0, total: 0 };
+      }
     },
   },
 

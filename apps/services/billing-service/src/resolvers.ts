@@ -199,7 +199,11 @@ export const resolvers = {
           voiceLimitMinutes: null,
           smsLimit: null,
         };
-      } catch {
+      } catch (err) {
+        console.error(
+          `[billing-service] Failed to fetch current usage for ${parent.customerId}:`,
+          err,
+        );
         // Return empty usage if Cassandra is unavailable
         return {
           dataUsedGB: 0,
@@ -216,8 +220,12 @@ export const resolvers = {
 
     usageByDay: async (parent: { customerId: string }, args: { month: string }) => {
       try {
-        return getDailyUsage(parent.customerId, args.month);
-      } catch {
+        return await getDailyUsage(parent.customerId, args.month);
+      } catch (err) {
+        console.error(
+          `[billing-service] Failed to fetch daily usage for ${parent.customerId} month=${args.month}:`,
+          err,
+        );
         return [];
       }
     },
@@ -231,8 +239,17 @@ export const resolvers = {
       },
     ) => {
       try {
-        return getCDRs(parent.customerId, args.month, args.first ?? 20, args.after ?? undefined);
-      } catch {
+        return await getCDRs(
+          parent.customerId,
+          args.month,
+          args.first ?? 20,
+          args.after ?? undefined,
+        );
+      } catch (err) {
+        console.error(
+          `[billing-service] Failed to fetch CDRs for ${parent.customerId} month=${args.month}:`,
+          err,
+        );
         return {
           edges: [],
           pageInfo: {

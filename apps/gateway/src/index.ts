@@ -100,17 +100,7 @@ async function main(): Promise<void> {
   });
   await server.start();
 
-  // Rate limiting (200 requests per minute per IP)
-  const limiter = rateLimit({
-    windowMs: 60 * 1000,
-    max: 200,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests, please try again later.' },
-  });
-  app.use(limiter);
-
-  // CORS
+  // CORS — must come BEFORE rate limiter so preflight responses include CORS headers
   app.use(
     cors({
       origin: [
@@ -122,6 +112,19 @@ async function main(): Promise<void> {
       credentials: true,
     }) as express.RequestHandler,
   );
+
+  // Rate limiting (1000 requests per minute per IP — generous for dev/demo)
+  // Skip preflight OPTIONS requests so CORS is never blocked
+  const limiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 1000,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => req.method === 'OPTIONS',
+    message: { error: 'Too many requests, please try again later.' },
+  });
+  app.use(limiter);
+
   app.use(express.json());
 
   // GraphQL endpoint
