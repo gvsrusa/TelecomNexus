@@ -131,9 +131,11 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
               id="user-dropdown"
               align="end"
             >
-              <NavDropdown.Item>Profile</NavDropdown.Item>
+              <NavDropdown.Item onClick={() => router.push('/customer/account')}>
+                Profile
+              </NavDropdown.Item>
               <NavDropdown.Divider />
-              <NavDropdown.Item>Logout</NavDropdown.Item>
+              <NavDropdown.Item onClick={() => router.push('/')}>Logout</NavDropdown.Item>
             </NavDropdown>
           </div>
         </Container>
