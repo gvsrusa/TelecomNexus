@@ -16,23 +16,89 @@
 [data-bs-theme="dark"] {
   --bs-body-bg: #1a1d21;
   --bs-body-color: #e1e4e8;
+  --bs-border-color: rgba(255, 255, 255, 0.15);
 }
 
+/* Default card styling in dark mode — sets color/bg but doesn't force border width,
+   so accent borders (border-start border-primary border-4) are preserved. */
 [data-bs-theme="dark"] .card {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.13);
+  background-color: #212529;
+}
+
+/* Cards that use .border-0 have no border at all — force one back in dark mode */
+[data-bs-theme="dark"] .card.border-0 {
+  border: 1px solid rgba(255, 255, 255, 0.13) !important;
 }
 
 [data-bs-theme="dark"] .card-hover:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
 }
 
+/* Dark mode shadows need more contrast */
+[data-bs-theme="dark"] .shadow-sm {
+  box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.45) !important;
+}
+
+/* Table styles */
 [data-bs-theme="dark"] .table-light {
   --bs-table-bg: #2a2d31;
   --bs-table-color: #e1e4e8;
 }
 
+[data-bs-theme="dark"] .table {
+  --bs-table-border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* List group items */
+[data-bs-theme="dark"] .list-group-item {
+  border-color: rgba(255, 255, 255, 0.1);
+  background-color: transparent;
+}
+
+/* Offcanvas & modal borders */
+[data-bs-theme="dark"] .offcanvas {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-bs-theme="dark"] .modal-content {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Sidebar, navbar, footer border separators */
+[data-bs-theme="dark"] .border-end {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-bs-theme="dark"] .border-bottom {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-bs-theme="dark"] .border-top {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Dashboard border-start stat cards (preserve the colored left accent) */
+[data-bs-theme="dark"] .border-start {
+  border-color: inherit;
+}
+
 [data-bs-theme="dark"] .bg-body-tertiary {
   --bs-tertiary-bg: #212529 !important;
+}
+
+/* Form controls & selects */
+[data-bs-theme="dark"] .form-select,
+[data-bs-theme="dark"] .form-control {
+  border-color: rgba(255, 255, 255, 0.15);
+  background-color: #2a2d31;
+  color: #e1e4e8;
+}
+
+/* Nav dropdown */
+[data-bs-theme="dark"] .dropdown-menu {
+  border-color: rgba(255, 255, 255, 0.12);
+  background-color: #2a2d31;
 }
 
 /* Dark mode Recharts */
@@ -97,6 +163,14 @@ html {
   border: none;
   border-radius: 12px;
   overflow: hidden;
+}
+
+/* Stat-cards: add subtle borders on non-accent sides in dark mode.
+   border-left is left untouched so .border-start .border-primary .border-4 accent is preserved. */
+[data-bs-theme="dark"] .stat-card {
+  border-top: 1px solid rgba(255, 255, 255, 0.13) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.13) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.13) !important;
 }
 
 .stat-card .card-body {
