@@ -13,14 +13,13 @@ const GET_PLANS = gql`
       name
       tier
       monthlyPrice
-      isActive
       features {
         dataLimitGB
         voiceMinutes
-        smsLimit
+        smsCount
         fiveGAccess
         internationalRoaming
-        hotspotData
+        hotspotGB
       }
     }
     customer(customerId: $customerId) {
@@ -34,9 +33,15 @@ const GET_PLANS = gql`
 
 const CHANGE_PLAN = gql`
   mutation ChangePlan($customerId: ID!, $planCode: String!) {
-    changePlan(customerId: $customerId, newPlanCode: $planCode) {
+    changePlan(customerId: $customerId, planCode: $planCode) {
       success
-      message
+      customer {
+        customerId
+      }
+      newPlan {
+        planCode
+        name
+      }
     }
   }
 `;
@@ -46,14 +51,13 @@ interface Plan {
   name: string;
   tier: string;
   monthlyPrice: number;
-  isActive: boolean;
   features: {
     dataLimitGB: number;
     voiceMinutes: number;
-    smsLimit: number;
+    smsCount: number;
     fiveGAccess: boolean;
     internationalRoaming: boolean;
-    hotspotData: number;
+    hotspotGB: number;
   };
 }
 
@@ -109,7 +113,7 @@ export default function PlansPage() {
                         <small>{plan.features.voiceMinutes} Voice Min</small>
                       </ListGroup.Item>
                       <ListGroup.Item className="px-0 py-1 border-0">
-                        <small>{plan.features.smsLimit} SMS</small>
+                        <small>{plan.features.smsCount} SMS</small>
                       </ListGroup.Item>
                       <ListGroup.Item className="px-0 py-1 border-0">
                         <small>{plan.features.fiveGAccess ? '\u2705' : '\u274C'} 5G</small>

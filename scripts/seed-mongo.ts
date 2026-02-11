@@ -640,8 +640,9 @@ async function main(): Promise<void> {
 
   for (const dt of DEVICE_TYPES) {
     for (let i = 0; i < dt.count; i++) {
-      const region = pick(REGIONS);
-      const loc = pick(CITIES.filter((c) => c.region === region));
+      const region = REGIONS[deviceIdx % REGIONS.length]!;
+      const regionCities = CITIES.filter((c) => c.region === region);
+      const loc = regionCities.length > 0 ? pick(regionCities) : pick(CITIES);
       const deviceId = `${dt.prefix}-${region.substring(0, 3).toUpperCase()}-${padId(deviceIdx, 3)}`;
       deviceIds.push(deviceId);
 

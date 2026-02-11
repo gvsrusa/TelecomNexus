@@ -18,7 +18,7 @@ const GET_CUSTOMER = gql`
         street
         city
         state
-        zipCode
+        zip
         country
       }
       activePlan {
@@ -29,10 +29,10 @@ const GET_CUSTOMER = gql`
         features {
           dataLimitGB
           voiceMinutes
-          smsLimit
+          smsCount
           fiveGAccess
           internationalRoaming
-          hotspotData
+          hotspotGB
         }
       }
       createdAt
@@ -104,7 +104,7 @@ export default function AccountPage() {
                     </ListGroup.Item>
                     <ListGroup.Item className="d-flex justify-content-between">
                       <span>SMS</span>
-                      <strong>{plan?.features?.smsLimit}</strong>
+                      <strong>{plan?.features?.smsCount}</strong>
                     </ListGroup.Item>
                     <ListGroup.Item className="d-flex justify-content-between">
                       <span>5G</span>
@@ -128,7 +128,7 @@ export default function AccountPage() {
                     <div>
                       <p className="mb-1">{customer.address.street}</p>
                       <p className="mb-0">
-                        {customer.address.city}, {customer.address.state} {customer.address.zipCode}
+                        {customer.address.city}, {customer.address.state} {customer.address.zip}
                       </p>
                     </div>
                   ) : (

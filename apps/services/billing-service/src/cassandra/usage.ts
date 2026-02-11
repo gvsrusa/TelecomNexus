@@ -20,7 +20,7 @@ export async function getDailyUsage(customerId: string, month: string): Promise<
   const result = await cassandraClient.execute(query, [customerId, month], { prepare: true });
 
   return result.rows.map((row) => ({
-    date: formatLocalDate(row['date'] as Date),
+    date: formatLocalDate(row['date']),
     dataUsedMB: Math.round(Number(row['data_mb'])),
     voiceUsedSeconds: Math.round(Number(row['voice_minutes']) * 60),
     smsCount: Number(row['sms_count']),
@@ -67,10 +67,15 @@ export async function getCurrentUsage(customerId: string): Promise<{
   };
 }
 
-function formatLocalDate(d: Date): string {
+function formatLocalDate(d: unknown): string {
   if (typeof d === 'string') return d;
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  // Cassandra driver returns LocalDate objects with .toString() → 'YYYY-MM-DD'
+  if (d && typeof d === 'object' && 'toString' in d) return d.toString();
+  if (d instanceof Date) {
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return String(d);
 }

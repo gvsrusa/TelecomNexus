@@ -13,16 +13,19 @@ const GET_ALERTS = gql`
       info
       total
     }
-    alerts(deviceId: $deviceId, limit: 50) {
+    alerts(deviceId: $deviceId) {
       alertId
-      deviceId
+      device {
+        deviceId
+        name
+      }
       severity
       status
-      message
-      source
+      title
+      description
       timestamp
     }
-    devices(limit: 100) {
+    devices {
       deviceId
       name
     }
@@ -38,8 +41,8 @@ const ACK = gql`
   }
 `;
 const RESOLVE = gql`
-  mutation Resolve($alertId: ID!) {
-    resolveAlert(alertId: $alertId) {
+  mutation Resolve($alertId: ID!, $resolution: String!) {
+    resolveAlert(alertId: $alertId, resolution: $resolution) {
       alertId
       status
     }
@@ -48,11 +51,11 @@ const RESOLVE = gql`
 
 interface Alert {
   alertId: string;
-  deviceId: string;
+  device: { deviceId: string; name: string };
   severity: string;
   status: string;
-  message: string;
-  source: string;
+  title: string;
+  description: string;
   timestamp: string;
 }
 
@@ -170,8 +173,8 @@ export default function AlertsPage() {
                         <Badge bg={sevColor(a.severity)}>{a.severity}</Badge>
                         <Badge bg={statColor(a.status)}>{a.status}</Badge>
                       </div>
-                      <div className="fw-bold">{a.message}</div>
-                      <small className="text-muted">{a.deviceId}</small>
+                      <div className="fw-bold">{a.title}</div>
+                      <small className="text-muted">{a.device?.deviceId}</small>
                     </div>
                     <small className="text-muted text-nowrap">
                       {new Date(a.timestamp).toLocaleString()}
@@ -191,7 +194,7 @@ export default function AlertsPage() {
                   </Button>
                 </Card.Header>
                 <Card.Body>
-                  <h5>{selected.message}</h5>
+                  <h5>{selected.title}</h5>
                   <div className="d-flex gap-2 mb-3">
                     <Badge bg={sevColor(selected.severity)}>{selected.severity}</Badge>
                     <Badge bg={statColor(selected.status)}>{selected.status}</Badge>
@@ -203,11 +206,11 @@ export default function AlertsPage() {
                     </ListGroup.Item>
                     <ListGroup.Item className="d-flex justify-content-between px-0">
                       <span>Device</span>
-                      <span>{selected.deviceId}</span>
+                      <span>{selected.device?.name ?? selected.device?.deviceId}</span>
                     </ListGroup.Item>
                     <ListGroup.Item className="d-flex justify-content-between px-0">
-                      <span>Source</span>
-                      <span>{selected.source}</span>
+                      <span>Description</span>
+                      <span>{selected.description}</span>
                     </ListGroup.Item>
                   </ListGroup>
                   <div className="d-flex gap-2">
@@ -228,7 +231,12 @@ export default function AlertsPage() {
                         variant="success"
                         size="sm"
                         onClick={async () => {
-                          await resolve({ variables: { alertId: selected.alertId } });
+                          await resolve({
+                            variables: {
+                              alertId: selected.alertId,
+                              resolution: 'Resolved by operator',
+                            },
+                          });
                           refetch();
                         }}
                       >

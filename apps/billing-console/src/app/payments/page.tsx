@@ -16,8 +16,8 @@ const GET_PAYMENTS = gql`
         method
         status
         transactionRef
-        processedDate
-        invoiceId
+        processedAt
+        invoiceNumber
       }
     }
   }
@@ -38,8 +38,8 @@ interface Payment {
   method: string;
   status: string;
   transactionRef: string;
-  processedDate: string;
-  invoiceId: string;
+  processedAt: string;
+  invoiceNumber: string;
 }
 
 export default function PaymentsPage() {
@@ -64,7 +64,7 @@ export default function PaymentsPage() {
   };
   const statusColor = (s: string) => {
     switch (s) {
-      case 'COMPLETED':
+      case 'SUCCESS':
         return 'success';
       case 'PENDING':
         return 'warning';
@@ -76,7 +76,7 @@ export default function PaymentsPage() {
   };
 
   const grouped = payments.reduce<Record<string, Payment[]>>((acc, p) => {
-    const key = new Date(p.processedDate).toLocaleDateString([], {
+    const key = new Date(p.processedAt).toLocaleDateString([], {
       year: 'numeric',
       month: 'long',
     });
@@ -86,7 +86,7 @@ export default function PaymentsPage() {
   }, {});
 
   const totalPaid = payments
-    .filter((p) => p.status === 'COMPLETED')
+    .filter((p) => p.status === 'SUCCESS')
     .reduce((s, p) => s + p.amount, 0);
 
   return (
@@ -128,7 +128,7 @@ export default function PaymentsPage() {
                 <ListGroup.Item className="d-flex justify-content-between px-0 py-1">
                   <small>Completed</small>
                   <Badge bg="success">
-                    {payments.filter((p) => p.status === 'COMPLETED').length}
+                    {payments.filter((p) => p.status === 'SUCCESS').length}
                   </Badge>
                 </ListGroup.Item>
                 <ListGroup.Item className="d-flex justify-content-between px-0 py-1">
@@ -164,7 +164,7 @@ export default function PaymentsPage() {
                     <Col>
                       <div className="fw-bold">{p.method.replace(/_/g, ' ')}</div>
                       <small className="text-muted">
-                        {new Date(p.processedDate).toLocaleDateString()} &middot; {p.transactionRef}
+                        {new Date(p.processedAt).toLocaleDateString()} &middot; {p.transactionRef}
                       </small>
                     </Col>
                     <Col xs="auto" className="text-end">
@@ -172,7 +172,7 @@ export default function PaymentsPage() {
                       <Badge bg={statusColor(p.status)}>{p.status}</Badge>
                     </Col>
                     <Col xs="auto">
-                      {p.status === 'COMPLETED' && (
+                      {p.status === 'SUCCESS' && (
                         <Button
                           variant="outline-secondary"
                           size="sm"

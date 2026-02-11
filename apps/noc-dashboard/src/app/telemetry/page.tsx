@@ -16,11 +16,11 @@ import {
 } from 'recharts';
 
 const GET_TELEMETRY = gql`
-  query GetTelemetry($deviceId: ID!, $timeRange: TimeRangeInput!) {
+  query GetTelemetry($deviceId: ID!, $timeRange: TimeRange!) {
     telemetry(deviceId: $deviceId, timeRange: $timeRange) {
       timestamp
-      cpuLoad
-      memoryUsage
+      cpuPercent
+      memoryPercent
       bandwidthMbps
       packetLossPercent
       temperatureCelsius
@@ -30,7 +30,7 @@ const GET_TELEMETRY = gql`
 
 const GET_DEVICES = gql`
   query GetDeviceList {
-    devices(limit: 100) {
+    devices {
       deviceId
       name
     }
@@ -72,14 +72,14 @@ export default function TelemetryPage() {
   const chartData = readings.map(
     (r: {
       timestamp: string;
-      cpuLoad: number;
-      memoryUsage: number;
+      cpuPercent: number;
+      memoryPercent: number;
       bandwidthMbps: number;
       packetLossPercent: number;
     }) => ({
       time: new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      cpu: r.cpuLoad,
-      memory: r.memoryUsage,
+      cpu: r.cpuPercent,
+      memory: r.memoryPercent,
       bandwidth: r.bandwidthMbps,
       packetLoss: r.packetLossPercent,
     }),

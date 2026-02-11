@@ -6,22 +6,26 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 
 const GET_DEVICES = gql`
   query GetDevices {
-    devices(limit: 100) {
+    devices {
       deviceId
       name
       type
       status
       location {
-        latitude
-        longitude
+        lat
+        lng
+        address
         region
       }
       metadata {
+        manufacturer
+        model
         firmwareVersion
-        uptime
-        lastSeen
+        installDate
       }
-      connectedDeviceIds
+      connectedDevices {
+        deviceId
+      }
     }
   }
 `;
@@ -31,9 +35,9 @@ interface Device {
   name: string;
   type: string;
   status: string;
-  location: { latitude: number; longitude: number; region: string };
-  metadata: { firmwareVersion: string; uptime: number; lastSeen: string };
-  connectedDeviceIds: string[];
+  location: { lat: number; lng: number; address: string; region: string };
+  metadata: { manufacturer: string; model: string; firmwareVersion: string; installDate: string };
+  connectedDevices: { deviceId: string }[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -102,8 +106,8 @@ export default function TopologyPage() {
     filtered.forEach((device) => {
       const pos = nodePositions.get(device.deviceId);
       if (!pos) return;
-      (device.connectedDeviceIds ?? []).forEach((connId) => {
-        const connPos = nodePositions.get(connId);
+      (device.connectedDevices ?? []).forEach((conn) => {
+        const connPos = nodePositions.get(conn.deviceId);
         if (!connPos) return;
         ctx.beginPath();
         ctx.moveTo(pos.x, pos.y);
@@ -315,27 +319,23 @@ export default function TopologyPage() {
                   <span>{selectedDevice.metadata?.firmwareVersion}</span>
                 </ListGroup.Item>
                 <ListGroup.Item className="d-flex justify-content-between">
-                  <span>Uptime</span>
-                  <span>{Math.floor((selectedDevice.metadata?.uptime ?? 0) / 3600)}h</span>
+                  <span>Manufacturer</span>
+                  <span>{selectedDevice.metadata?.manufacturer}</span>
                 </ListGroup.Item>
                 <ListGroup.Item className="d-flex justify-content-between">
-                  <span>Last Seen</span>
-                  <span>
-                    {selectedDevice.metadata?.lastSeen
-                      ? new Date(selectedDevice.metadata.lastSeen).toLocaleString()
-                      : 'N/A'}
-                  </span>
+                  <span>Model</span>
+                  <span>{selectedDevice.metadata?.model}</span>
                 </ListGroup.Item>
                 <ListGroup.Item className="d-flex justify-content-between">
                   <span>Connections</span>
-                  <span>{selectedDevice.connectedDeviceIds?.length ?? 0} devices</span>
+                  <span>{selectedDevice.connectedDevices?.length ?? 0} devices</span>
                 </ListGroup.Item>
               </ListGroup>
               <h6>Connected Devices</h6>
               <div className="d-flex flex-wrap gap-1">
-                {selectedDevice.connectedDeviceIds?.map((id) => (
-                  <Badge key={id} bg="light" text="dark">
-                    {id}
+                {selectedDevice.connectedDevices?.map((conn) => (
+                  <Badge key={conn.deviceId} bg="light" text="dark">
+                    {conn.deviceId}
                   </Badge>
                 ))}
               </div>

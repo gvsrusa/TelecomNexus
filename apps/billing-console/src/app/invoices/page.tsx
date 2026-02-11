@@ -18,23 +18,23 @@ const GET_INVOICES = gql`
         }
         lineItems {
           description
+          category
           amount
-          quantity
         }
         totalAmount
         status
         dueDate
-        paidDate
+        paidAt
       }
     }
   }
 `;
 
 const PAY_INVOICE = gql`
-  mutation PayInvoice($input: PayInvoiceInput!) {
-    payInvoice(input: $input) {
+  mutation PayInvoice($invoiceNumber: String!, $method: PaymentMethod!, $idempotencyKey: String!) {
+    payInvoice(invoiceNumber: $invoiceNumber, method: $method, idempotencyKey: $idempotencyKey) {
       success
-      message
+      errorMessage
       payment {
         paymentId
         amount
@@ -47,11 +47,11 @@ const PAY_INVOICE = gql`
 interface Invoice {
   invoiceNumber: string;
   billingPeriod: { start: string; end: string };
-  lineItems: { description: string; amount: number; quantity: number }[];
+  lineItems: { description: string; category: string; amount: number }[];
   totalAmount: number;
   status: string;
   dueDate: string;
-  paidDate: string | null;
+  paidAt: string | null;
 }
 
 export default function InvoicesPage() {
@@ -81,13 +81,9 @@ export default function InvoicesPage() {
     if (!selected) return;
     await payInvoice({
       variables: {
-        input: {
-          customerId: CUSTOMER_ID,
-          invoiceNumber: selected.invoiceNumber,
-          amount: selected.totalAmount,
-          method,
-          idempotencyKey: `pay-${selected.invoiceNumber}-${Date.now()}`,
-        },
+        invoiceNumber: selected.invoiceNumber,
+        method,
+        idempotencyKey: `pay-${selected.invoiceNumber}-${Date.now()}`,
       },
     });
     setShowPay(false);
@@ -191,7 +187,7 @@ export default function InvoicesPage() {
                 <thead>
                   <tr>
                     <th>Description</th>
-                    <th className="text-end">Qty</th>
+                    <th>Category</th>
                     <th className="text-end">Amount</th>
                   </tr>
                 </thead>
@@ -199,7 +195,7 @@ export default function InvoicesPage() {
                   {selected.lineItems?.map((li, i) => (
                     <tr key={i}>
                       <td>{li.description}</td>
-                      <td className="text-end">{li.quantity}</td>
+                      <td>{li.category}</td>
                       <td className="text-end">${li.amount.toFixed(2)}</td>
                     </tr>
                   ))}

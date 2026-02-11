@@ -18,11 +18,11 @@ const GET_DASHBOARD = gql`
         features {
           dataLimitGB
           voiceMinutes
-          smsLimit
+          smsCount
         }
       }
     }
-    devices(limit: 100) {
+    devices {
       deviceId
       status
     }

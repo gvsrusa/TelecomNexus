@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 const GET_NOC_OVERVIEW = gql`
   query GetNOCOverview {
-    devices(limit: 100) {
+    devices {
       deviceId
       status
       type

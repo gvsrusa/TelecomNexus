@@ -17,7 +17,8 @@ const GET_TICKETS = gql`
       createdAt
       messages {
         sender
-        body
+        senderName
+        content
         timestamp
       }
     }
@@ -41,7 +42,7 @@ interface Ticket {
   status: string;
   priority: string;
   createdAt: string;
-  messages: { sender: string; body: string; timestamp: string }[];
+  messages: { sender: string; senderName: string; content: string; timestamp: string }[];
 }
 
 export default function TicketsPage() {
@@ -53,17 +54,19 @@ export default function TicketsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState('BILLING');
-  const [message, setMessage] = useState('');
+  const [priority, setPriority] = useState('MEDIUM');
+  const [description, setDescription] = useState('');
 
   const tickets: Ticket[] = data?.tickets ?? [];
 
   const handleCreate = async () => {
     await createTicket({
-      variables: { input: { customerId: CUSTOMER_ID, subject, category, message } },
+      variables: { input: { customerId: CUSTOMER_ID, subject, category, priority, description } },
     });
     setShowCreate(false);
     setSubject('');
-    setMessage('');
+    setPriority('MEDIUM');
+    setDescription('');
     refetch();
   };
 
@@ -143,7 +146,7 @@ export default function TicketsPage() {
                     className={`mb-2 p-2 rounded ${msg.sender === 'CUSTOMER' ? 'bg-primary bg-opacity-10 ms-4' : 'bg-secondary bg-opacity-10 me-4'}`}
                   >
                     <small className="fw-bold">{msg.sender === 'CUSTOMER' ? 'You' : 'Agent'}</small>
-                    <p className="mb-0 small">{msg.body}</p>
+                    <p className="mb-0 small">{msg.content}</p>
                   </div>
                 ))}
               </div>
@@ -165,18 +168,28 @@ export default function TicketsPage() {
             <Form.Label>Category</Form.Label>
             <Form.Select value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="BILLING">Billing</option>
-              <option value="TECHNICAL">Technical</option>
               <option value="NETWORK">Network</option>
-              <option value="ACCOUNT">Account</option>
+              <option value="DEVICE">Device</option>
+              <option value="PLAN">Plan</option>
+              <option value="OTHER">Other</option>
             </Form.Select>
           </Form.Group>
           <Form.Group className="mb-3">
-            <Form.Label>Message</Form.Label>
+            <Form.Label>Priority</Form.Label>
+            <Form.Select value={priority} onChange={(e) => setPriority(e.target.value)}>
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
+              <option value="CRITICAL">Critical</option>
+            </Form.Select>
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>Description</Form.Label>
             <Form.Control
               as="textarea"
               rows={3}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </Form.Group>
         </Modal.Body>
@@ -184,7 +197,7 @@ export default function TicketsPage() {
           <Button variant="secondary" onClick={() => setShowCreate(false)}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleCreate} disabled={!subject || !message}>
+          <Button variant="primary" onClick={handleCreate} disabled={!subject || !description}>
             Submit
           </Button>
         </Modal.Footer>

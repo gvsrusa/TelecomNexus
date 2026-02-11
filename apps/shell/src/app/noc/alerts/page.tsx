@@ -14,16 +14,19 @@ const GET_ALERTS = gql`
       info
       total
     }
-    alerts(deviceId: $deviceId, limit: 50) {
+    alerts(deviceId: $deviceId) {
       alertId
-      deviceId
+      device {
+        deviceId
+        name
+      }
       severity
       status
-      message
-      source
+      title
+      description
       timestamp
     }
-    devices(limit: 100) {
+    devices {
       deviceId
       name
     }
@@ -40,8 +43,8 @@ const ACKNOWLEDGE_ALERT = gql`
 `;
 
 const RESOLVE_ALERT = gql`
-  mutation ResolveAlert($alertId: ID!) {
-    resolveAlert(alertId: $alertId) {
+  mutation ResolveAlert($alertId: ID!, $resolution: String!) {
+    resolveAlert(alertId: $alertId, resolution: $resolution) {
       alertId
       status
     }
@@ -50,11 +53,11 @@ const RESOLVE_ALERT = gql`
 
 interface Alert {
   alertId: string;
-  deviceId: string;
+  device: { deviceId: string; name: string };
   severity: string;
   status: string;
-  message: string;
-  source: string;
+  title: string;
+  description: string;
   timestamp: string;
 }
 
@@ -122,7 +125,7 @@ export default function AlertsPage() {
 
   const handleResolve = async (alertId: string) => {
     try {
-      await resolveAlert({ variables: { alertId } });
+      await resolveAlert({ variables: { alertId, resolution: 'Resolved by operator' } });
       addToast({ title: 'Alert Resolved', body: `Alert ${alertId}`, variant: 'success' });
       refetch();
     } catch (err) {
@@ -235,9 +238,9 @@ export default function AlertsPage() {
                           <Badge bg={severityColor(alert.severity)}>{alert.severity}</Badge>
                           <Badge bg={statusColor(alert.status)}>{alert.status}</Badge>
                         </div>
-                        <div className="fw-bold">{alert.message}</div>
+                        <div className="fw-bold">{alert.title}</div>
                         <small className="text-muted">
-                          {alert.deviceId} &middot; {alert.source}
+                          {alert.device?.deviceId} &middot; {alert.description}
                         </small>
                       </div>
                       <small className="text-muted text-nowrap ms-2">
@@ -267,7 +270,7 @@ export default function AlertsPage() {
                     </Badge>
                     <Badge bg={statusColor(selectedAlert.status)}>{selectedAlert.status}</Badge>
                   </div>
-                  <h5>{selectedAlert.message}</h5>
+                  <h5>{selectedAlert.title}</h5>
                   <ListGroup variant="flush" className="mb-3">
                     <ListGroup.Item className="d-flex justify-content-between px-0">
                       <span>Alert ID</span>
@@ -275,11 +278,11 @@ export default function AlertsPage() {
                     </ListGroup.Item>
                     <ListGroup.Item className="d-flex justify-content-between px-0">
                       <span>Device</span>
-                      <span>{selectedAlert.deviceId}</span>
+                      <span>{selectedAlert.device?.name ?? selectedAlert.device?.deviceId}</span>
                     </ListGroup.Item>
                     <ListGroup.Item className="d-flex justify-content-between px-0">
-                      <span>Source</span>
-                      <span>{selectedAlert.source}</span>
+                      <span>Description</span>
+                      <span>{selectedAlert.description}</span>
                     </ListGroup.Item>
                     <ListGroup.Item className="d-flex justify-content-between px-0">
                       <span>Time</span>

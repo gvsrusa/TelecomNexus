@@ -17,24 +17,24 @@ import {
 
 const GET_USAGE = gql`
   query GetUsage($customerId: ID!, $month: String!) {
-    currentUsage(customerId: $customerId) {
-      totalDataMB
-      totalVoiceMinutes
-      totalSMS
-    }
-    dailyUsage(customerId: $customerId, month: $month) {
-      date
-      dataMB
-      voiceMinutes
-      smsCount
-    }
     customer(customerId: $customerId) {
       customerId
+      currentUsage {
+        dataUsedGB
+        voiceUsedMinutes
+        smsCount
+      }
+      usageByDay(month: $month) {
+        date
+        dataUsedMB
+        voiceUsedSeconds
+        smsCount
+      }
       activePlan {
         features {
           dataLimitGB
           voiceMinutes
-          smsLimit
+          smsCount
         }
       }
     }
@@ -43,8 +43,8 @@ const GET_USAGE = gql`
 
 interface DailyUsage {
   date: string;
-  dataMB: number;
-  voiceMinutes: number;
+  dataUsedMB: number;
+  voiceUsedSeconds: number;
   smsCount: number;
 }
 
@@ -59,30 +59,30 @@ export default function UsagePage() {
     variables: { customerId, month },
   });
 
-  const currentUsage = data?.currentUsage;
-  const daily: DailyUsage[] = data?.dailyUsage ?? [];
+  const currentUsage = data?.customer?.currentUsage;
+  const daily: DailyUsage[] = data?.customer?.usageByDay ?? [];
   const plan = data?.customer?.activePlan;
   const dataLimitMB = (plan?.features?.dataLimitGB ?? 50) * 1024;
 
   // Chart data
   const chartData = daily.map((d) => ({
     date: new Date(d.date).toLocaleDateString([], { month: 'short', day: 'numeric' }),
-    data: Math.round(d.dataMB),
-    voice: d.voiceMinutes,
+    data: Math.round(d.dataUsedMB),
+    voice: Math.round(d.voiceUsedSeconds / 60),
     sms: d.smsCount,
   }));
 
   // Calculate percentages
-  const dataUsedGB = (currentUsage?.totalDataMB ?? 0) / 1024;
+  const dataUsedGB = currentUsage?.dataUsedGB ?? 0;
   const dataLimitGB = plan?.features?.dataLimitGB ?? 50;
   const dataPct = Math.min(100, (dataUsedGB / dataLimitGB) * 100);
   const voicePct = Math.min(
     100,
-    ((currentUsage?.totalVoiceMinutes ?? 0) / (plan?.features?.voiceMinutes ?? 1000)) * 100,
+    ((currentUsage?.voiceUsedMinutes ?? 0) / (plan?.features?.voiceMinutes ?? 1000)) * 100,
   );
   const smsPct = Math.min(
     100,
-    ((currentUsage?.totalSMS ?? 0) / (plan?.features?.smsLimit ?? 5000)) * 100,
+    ((currentUsage?.smsCount ?? 0) / (plan?.features?.smsCount ?? 5000)) * 100,
   );
 
   // Generate month options
@@ -130,15 +130,15 @@ export default function UsagePage() {
               },
               {
                 label: 'Voice',
-                used: `${currentUsage?.totalVoiceMinutes ?? 0} min`,
+                used: `${currentUsage?.voiceUsedMinutes ?? 0} min`,
                 limit: `${plan?.features?.voiceMinutes ?? 0} min`,
                 pct: voicePct,
                 color: voicePct > 80 ? '#DC3545' : '#6C63FF',
               },
               {
                 label: 'SMS',
-                used: `${currentUsage?.totalSMS ?? 0}`,
-                limit: `${plan?.features?.smsLimit ?? 0}`,
+                used: `${currentUsage?.smsCount ?? 0}`,
+                limit: `${plan?.features?.smsCount ?? 0}`,
                 pct: smsPct,
                 color: smsPct > 80 ? '#DC3545' : '#28A745',
               },

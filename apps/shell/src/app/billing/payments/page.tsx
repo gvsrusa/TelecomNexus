@@ -15,8 +15,8 @@ const GET_PAYMENTS = gql`
         method
         status
         transactionRef
-        processedDate
-        invoiceId
+        processedAt
+        invoiceNumber
       }
     }
   }
@@ -37,8 +37,8 @@ interface Payment {
   method: string;
   status: string;
   transactionRef: string;
-  processedDate: string;
-  invoiceId: string;
+  processedAt: string;
+  invoiceNumber: string;
 }
 
 export default function PaymentsPage() {
@@ -64,7 +64,7 @@ export default function PaymentsPage() {
 
   const statusColor = (s: string) => {
     switch (s) {
-      case 'COMPLETED':
+      case 'SUCCESS':
         return 'success';
       case 'PENDING':
         return 'warning';
@@ -86,7 +86,7 @@ export default function PaymentsPage() {
 
   // Group payments by month
   const groupedPayments = payments.reduce<Record<string, Payment[]>>((acc, p) => {
-    const date = new Date(p.processedDate);
+    const date = new Date(p.processedAt);
     const key = date.toLocaleDateString([], { year: 'numeric', month: 'long' });
     if (!acc[key]) acc[key] = [];
     acc[key].push(p);
@@ -94,7 +94,7 @@ export default function PaymentsPage() {
   }, {});
 
   const totalPaid = payments
-    .filter((p) => p.status === 'COMPLETED')
+    .filter((p) => p.status === 'SUCCESS')
     .reduce((sum, p) => sum + p.amount, 0);
 
   return (
@@ -144,7 +144,7 @@ export default function PaymentsPage() {
                 <ListGroup.Item className="d-flex justify-content-between px-0 py-1">
                   <small>Completed</small>
                   <Badge bg="success">
-                    {payments.filter((p) => p.status === 'COMPLETED').length}
+                    {payments.filter((p) => p.status === 'SUCCESS').length}
                   </Badge>
                 </ListGroup.Item>
                 <ListGroup.Item className="d-flex justify-content-between px-0 py-1">
@@ -199,7 +199,7 @@ export default function PaymentsPage() {
                     <Col>
                       <div className="fw-bold">{payment.method.replace(/_/g, ' ')}</div>
                       <small className="text-muted">
-                        {new Date(payment.processedDate).toLocaleDateString()} &middot;{' '}
+                        {new Date(payment.processedAt).toLocaleDateString()} &middot;{' '}
                         {payment.transactionRef}
                       </small>
                     </Col>
@@ -208,7 +208,7 @@ export default function PaymentsPage() {
                       <Badge bg={statusColor(payment.status)}>{payment.status}</Badge>
                     </Col>
                     <Col xs="auto">
-                      {payment.status === 'COMPLETED' && (
+                      {payment.status === 'SUCCESS' && (
                         <Button
                           variant="outline-secondary"
                           size="sm"

@@ -21,11 +21,11 @@ const GET_BILLING_OVERVIEW = gql`
         status
       }
       autoPayEnabled
-    }
-    currentUsage(customerId: $customerId) {
-      totalDataMB
-      totalVoiceMinutes
-      totalSMS
+      currentUsage {
+        dataUsedGB
+        voiceUsedMinutes
+        smsCount
+      }
     }
   }
 `;
@@ -36,7 +36,7 @@ export default function BillingHome() {
   });
   const invoices = data?.customer?.invoices ?? [];
   const payments = data?.customer?.payments ?? [];
-  const usage = data?.currentUsage;
+  const usage = data?.customer?.currentUsage;
   const totalOwed = invoices
     .filter((i: { status: string }) => i.status === 'DUE' || i.status === 'OVERDUE')
     .reduce((s: number, i: { totalAmount: number }) => s + i.totalAmount, 0);
@@ -73,7 +73,7 @@ export default function BillingHome() {
           <Card className="border-start border-info border-4 h-100">
             <Card.Body>
               <small className="text-muted text-uppercase">Data Used</small>
-              <h4>{loading ? '...' : `${((usage?.totalDataMB ?? 0) / 1024).toFixed(1)} GB`}</h4>
+              <h4>{loading ? '...' : `${(usage?.dataUsedGB ?? 0).toFixed(1)} GB`}</h4>
             </Card.Body>
           </Card>
         </Col>

@@ -18,7 +18,8 @@ const GET_TICKETS = gql`
       updatedAt
       messages {
         sender
-        body
+        senderName
+        content
         timestamp
       }
     }
@@ -43,7 +44,7 @@ interface Ticket {
   priority: string;
   createdAt: string;
   updatedAt: string;
-  messages: { sender: string; body: string; timestamp: string }[];
+  messages: { sender: string; senderName: string; content: string; timestamp: string }[];
 }
 
 export default function TicketsPage() {
@@ -58,7 +59,8 @@ export default function TicketsPage() {
   // Form state
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState('BILLING');
-  const [message, setMessage] = useState('');
+  const [priority, setPriority] = useState('MEDIUM');
+  const [description, setDescription] = useState('');
 
   const tickets: Ticket[] = data?.tickets ?? [];
   const filtered =
@@ -68,7 +70,7 @@ export default function TicketsPage() {
     try {
       await createTicket({
         variables: {
-          input: { customerId, subject, category, message },
+          input: { customerId, subject, category, priority, description },
         },
       });
       addToast({
@@ -79,7 +81,8 @@ export default function TicketsPage() {
       setShowCreate(false);
       setSubject('');
       setCategory('BILLING');
-      setMessage('');
+      setPriority('MEDIUM');
+      setDescription('');
       refetch();
     } catch (err) {
       addToast({
@@ -257,7 +260,7 @@ export default function TicketsPage() {
                         <small className="fw-bold">
                           {msg.sender === 'CUSTOMER' ? 'You' : 'Agent'}
                         </small>
-                        <p className="mb-1 small">{msg.body}</p>
+                        <p className="mb-1 small">{msg.content}</p>
                         <small className="text-muted">
                           {new Date(msg.timestamp).toLocaleString()}
                         </small>
@@ -291,23 +294,32 @@ export default function TicketsPage() {
               <Form.Label>Category</Form.Label>
               <Form.Select value={category} onChange={(e) => setCategory(e.target.value)}>
                 <option value="BILLING">Billing</option>
-                <option value="TECHNICAL">Technical</option>
                 <option value="NETWORK">Network</option>
-                <option value="ACCOUNT">Account</option>
+                <option value="DEVICE">Device</option>
+                <option value="PLAN">Plan</option>
                 <option value="OTHER">Other</option>
               </Form.Select>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Message</Form.Label>
+              <Form.Label>Priority</Form.Label>
+              <Form.Select value={priority} onChange={(e) => setPriority(e.target.value)}>
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="CRITICAL">Critical</option>
+              </Form.Select>
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Description</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={4}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe your issue in detail..."
                 required
               />
-              <Form.Text className="text-muted">{message.length}/1000 characters</Form.Text>
+              <Form.Text className="text-muted">{description.length}/1000 characters</Form.Text>
             </Form.Group>
           </Form>
         </Modal.Body>
@@ -315,7 +327,7 @@ export default function TicketsPage() {
           <Button variant="secondary" onClick={() => setShowCreate(false)}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleCreate} disabled={!subject || !message}>
+          <Button variant="primary" onClick={handleCreate} disabled={!subject || !description}>
             Submit Ticket
           </Button>
         </Modal.Footer>

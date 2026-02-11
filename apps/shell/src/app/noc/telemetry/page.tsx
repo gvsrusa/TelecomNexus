@@ -16,11 +16,11 @@ import {
 } from 'recharts';
 
 const GET_TELEMETRY = gql`
-  query GetTelemetry($deviceId: ID!, $timeRange: TimeRangeInput!) {
+  query GetTelemetry($deviceId: ID!, $timeRange: TimeRange!) {
     telemetry(deviceId: $deviceId, timeRange: $timeRange) {
       timestamp
-      cpuLoad
-      memoryUsage
+      cpuPercent
+      memoryPercent
       bandwidthMbps
       packetLossPercent
       temperatureCelsius
@@ -30,7 +30,7 @@ const GET_TELEMETRY = gql`
 
 const GET_DEVICES = gql`
   query GetTelemetryDevices {
-    devices(limit: 100) {
+    devices {
       deviceId
       name
       status
@@ -40,8 +40,8 @@ const GET_DEVICES = gql`
 
 interface TelemetryPoint {
   timestamp: string;
-  cpuLoad: number;
-  memoryUsage: number;
+  cpuPercent: number;
+  memoryPercent: number;
   bandwidthMbps: number;
   packetLossPercent: number;
   temperatureCelsius: number;
@@ -88,8 +88,8 @@ export default function TelemetryPage() {
   // Format for charts
   const chartData = readings.map((r) => ({
     time: new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    cpu: r.cpuLoad,
-    memory: r.memoryUsage,
+    cpu: r.cpuPercent,
+    memory: r.memoryPercent,
     bandwidth: r.bandwidthMbps,
     packetLoss: r.packetLossPercent,
     temperature: r.temperatureCelsius,
@@ -133,8 +133,8 @@ export default function TelemetryPage() {
       {latest && (
         <Row className="g-3 mb-4">
           {[
-            { label: 'CPU Load', value: `${latest.cpuLoad.toFixed(1)}%`, color: '#0066CC' },
-            { label: 'Memory', value: `${latest.memoryUsage.toFixed(1)}%`, color: '#6C63FF' },
+            { label: 'CPU Load', value: `${latest.cpuPercent.toFixed(1)}%`, color: '#0066CC' },
+            { label: 'Memory', value: `${latest.memoryPercent.toFixed(1)}%`, color: '#6C63FF' },
             {
               label: 'Bandwidth',
               value: `${latest.bandwidthMbps.toFixed(0)} Mbps`,

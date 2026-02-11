@@ -14,6 +14,32 @@ const CUSTOMER_SERVICE_URL = process.env.CUSTOMER_SERVICE_URL ?? 'http://localho
 const NETWORK_SERVICE_URL = process.env.NETWORK_SERVICE_URL ?? 'http://localhost:4002/graphql';
 const BILLING_SERVICE_URL = process.env.BILLING_SERVICE_URL ?? 'http://localhost:4003/graphql';
 
+// Wait for all subgraphs to be reachable before starting the gateway
+async function waitForSubgraphs(urls: string[], maxRetries = 30, delayMs = 2000): Promise<void> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const results = await Promise.allSettled(
+      urls.map(async (url) => {
+        const healthUrl = url.replace('/graphql', '/health');
+        const res = await fetch(healthUrl, { signal: AbortSignal.timeout(2000) });
+        if (!res.ok) throw new Error(`${healthUrl} returned ${res.status}`);
+      }),
+    );
+    const allReady = results.every((r) => r.status === 'fulfilled');
+    if (allReady) {
+      console.log(`[gateway] All subgraphs reachable (attempt ${attempt})`);
+      return;
+    }
+    const failed = results
+      .map((r, i) => (r.status === 'rejected' ? urls[i] : null))
+      .filter(Boolean);
+    console.log(
+      `[gateway] Waiting for subgraphs (attempt ${attempt}/${maxRetries}): ${failed.join(', ')}`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  throw new Error('Subgraphs did not become available in time');
+}
+
 // Depth-limiting validation rule
 function depthLimitRule(maxDepth: number) {
   return function DepthLimit(context: ValidationContext): ASTVisitor {
@@ -48,6 +74,9 @@ function depthLimitRule(maxDepth: number) {
 }
 
 async function main(): Promise<void> {
+  // Wait for subgraphs to be healthy before composing
+  await waitForSubgraphs([CUSTOMER_SERVICE_URL, NETWORK_SERVICE_URL, BILLING_SERVICE_URL]);
+
   // Create Apollo Gateway with IntrospectAndCompose
   const gateway = new ApolloGateway({
     supergraphSdl: new IntrospectAndCompose({
@@ -125,7 +154,23 @@ async function main(): Promise<void> {
   });
 }
 
-main().catch((err) => {
-  console.error('[gateway] Failed to start:', err);
-  process.exit(1);
-});
+// Retry main with exponential backoff (useful when subgraphs restart with schema changes)
+async function startWithRetry(maxRetries = 5, baseDelayMs = 3000): Promise<void> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await main();
+      return; // success
+    } catch (err) {
+      console.error(`[gateway] Start attempt ${attempt}/${maxRetries} failed:`, err);
+      if (attempt === maxRetries) {
+        console.error('[gateway] All retries exhausted, exiting.');
+        process.exit(1);
+      }
+      const delay = baseDelayMs * attempt;
+      console.log(`[gateway] Retrying in ${delay / 1000}s...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}
+
+startWithRetry();

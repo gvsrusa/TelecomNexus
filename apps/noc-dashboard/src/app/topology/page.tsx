@@ -6,22 +6,26 @@ import { useState } from 'react';
 
 const GET_DEVICES = gql`
   query GetDevices {
-    devices(limit: 100) {
+    devices {
       deviceId
       name
       type
       status
       location {
-        latitude
-        longitude
+        lat
+        lng
+        address
         region
       }
       metadata {
+        manufacturer
+        model
         firmwareVersion
-        uptime
-        lastSeen
+        installDate
       }
-      connectedDeviceIds
+      connectedDevices {
+        deviceId
+      }
     }
   }
 `;
@@ -31,9 +35,9 @@ interface Device {
   name: string;
   type: string;
   status: string;
-  location: { latitude: number; longitude: number; region: string };
-  metadata: { firmwareVersion: string; uptime: number; lastSeen: string };
-  connectedDeviceIds: string[];
+  location: { lat: number; lng: number; address: string; region: string };
+  metadata: { manufacturer: string; model: string; firmwareVersion: string; installDate: string };
+  connectedDevices: { deviceId: string }[];
 }
 
 export default function TopologyPage() {
@@ -125,7 +129,7 @@ export default function TopologyPage() {
                   </div>
                   <small className="text-muted">
                     {d.type} &middot; {d.location?.region} &middot;{' '}
-                    {d.connectedDeviceIds?.length ?? 0} connections
+                    {d.connectedDevices?.length ?? 0} connections
                   </small>
                 </Card.Body>
               </Card>
@@ -161,12 +165,12 @@ export default function TopologyPage() {
                 <span>{selected.metadata?.firmwareVersion}</span>
               </ListGroup.Item>
               <ListGroup.Item className="d-flex justify-content-between">
-                <span>Uptime</span>
-                <span>{Math.floor((selected.metadata?.uptime ?? 0) / 3600)}h</span>
+                <span>Manufacturer</span>
+                <span>{selected.metadata?.manufacturer}</span>
               </ListGroup.Item>
               <ListGroup.Item className="d-flex justify-content-between">
                 <span>Connections</span>
-                <span>{selected.connectedDeviceIds?.length ?? 0}</span>
+                <span>{selected.connectedDevices?.length ?? 0}</span>
               </ListGroup.Item>
             </ListGroup>
           )}

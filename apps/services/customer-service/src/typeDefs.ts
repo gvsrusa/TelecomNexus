@@ -34,7 +34,7 @@ export const typeDefs = gql`
     address: Address!
     activePlan: Plan!
     accountStatus: AccountStatus!
-    autoPayEnabled: Boolean!
+    autoPayEnabled: Boolean! @shareable
     createdAt: DateTime!
   }
 
