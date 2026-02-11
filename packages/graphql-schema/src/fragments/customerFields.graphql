@@ -1,0 +1,16 @@
+fragment CustomerFields on Customer {
+  customerId
+  firstName
+  lastName
+  email
+  phone
+  address {
+    street
+    city
+    state
+    zip
+    country
+  }
+  accountStatus
+  createdAt
+}

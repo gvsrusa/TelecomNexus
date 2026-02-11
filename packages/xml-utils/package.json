@@ -1,0 +1,20 @@
+{
+  "name": "@telecom-nexus/xml-utils",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@telecom-nexus/types": "*",
+    "@xmldom/xmldom": "^0.8.10",
+    "xmlbuilder2": "^4.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

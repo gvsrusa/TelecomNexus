@@ -1,0 +1,15 @@
+fragment TicketFields on Ticket {
+  ticketId
+  category
+  subject
+  status
+  priority
+  messages {
+    sender
+    senderName
+    content
+    timestamp
+  }
+  createdAt
+  updatedAt
+}

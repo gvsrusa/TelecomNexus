@@ -1,3 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.next/
+.turbo/
+out/
+build/
+
+# Docker
+docker/data/
+*.env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test
+coverage/
+test-results/
+playwright-report/
+.playwright/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
 CLAUDE.md
 .claude/*
-.DS_Store
+*.tsbuildinfo

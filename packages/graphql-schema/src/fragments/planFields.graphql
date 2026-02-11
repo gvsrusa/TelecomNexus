@@ -1,0 +1,16 @@
+fragment PlanFields on Plan {
+  planCode
+  name
+  description
+  monthlyPrice
+  currency
+  features {
+    dataLimitGB
+    voiceMinutes
+    smsCount
+    hotspotGB
+    internationalRoaming
+    fiveGAccess
+  }
+  tier
+}

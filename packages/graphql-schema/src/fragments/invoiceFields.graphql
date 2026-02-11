@@ -1,0 +1,17 @@
+fragment InvoiceFields on Invoice {
+  invoiceNumber
+  billingPeriod {
+    start
+    end
+  }
+  lineItems {
+    description
+    category
+    amount
+  }
+  totalAmount
+  currency
+  status
+  dueDate
+  paidAt
+}

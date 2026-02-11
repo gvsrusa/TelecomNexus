@@ -1,0 +1,31 @@
+query GetCustomer($customerId: ID!) {
+  customer(customerId: $customerId) {
+    ...CustomerFields
+    activePlan {
+      ...PlanFields
+    }
+  }
+}
+
+query GetPlans($tier: PlanTier) {
+  plans(tier: $tier) {
+    ...PlanFields
+  }
+}
+
+query GetTickets($customerId: ID!, $status: TicketStatus) {
+  tickets(customerId: $customerId, status: $status) {
+    ...TicketFields
+  }
+}
+
+query GetTicket($ticketId: ID!) {
+  ticket(ticketId: $ticketId) {
+    ...TicketFields
+    customer {
+      customerId
+      firstName
+      lastName
+    }
+  }
+}

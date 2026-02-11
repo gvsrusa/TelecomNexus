@@ -1,0 +1,42 @@
+query GetDevices($region: String, $status: DeviceStatus) {
+  devices(region: $region, status: $status) {
+    ...DeviceFields
+  }
+}
+
+query GetDevice($deviceId: ID!) {
+  device(deviceId: $deviceId) {
+    ...DeviceFields
+    connectedDevices {
+      deviceId
+      name
+      status
+    }
+  }
+}
+
+query GetTelemetry($deviceId: ID!, $timeRange: TimeRange!) {
+  telemetry(deviceId: $deviceId, timeRange: $timeRange) {
+    ...TelemetryFields
+  }
+}
+
+query GetAlerts($deviceId: ID, $severity: AlertSeverity, $status: AlertStatus) {
+  alerts(deviceId: $deviceId, severity: $severity, status: $status) {
+    ...AlertFields
+    device {
+      deviceId
+      name
+    }
+  }
+}
+
+query GetAlertsSummary {
+  alertsSummary {
+    critical
+    major
+    minor
+    info
+    total
+  }
+}

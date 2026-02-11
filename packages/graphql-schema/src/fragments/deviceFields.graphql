@@ -1,0 +1,19 @@
+fragment DeviceFields on NetworkDevice {
+  deviceId
+  type
+  name
+  location {
+    lat
+    lng
+    address
+    region
+  }
+  status
+  metadata {
+    manufacturer
+    model
+    firmwareVersion
+    installDate
+  }
+  configXml
+}
