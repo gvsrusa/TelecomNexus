@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@apollo/client": "^3.12.6",
-    "@telecom-nexus/ui": "*",
     "bootstrap": "^5.3.3",
     "graphql": "^16.9.0",
     "next": "^15.1.0",

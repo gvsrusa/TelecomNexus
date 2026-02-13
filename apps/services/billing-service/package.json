@@ -14,15 +14,14 @@
   "dependencies": {
     "@apollo/server": "^4.11.3",
     "@apollo/subgraph": "^2.9.3",
-    "@telecom-nexus/types": "*",
-    "@telecom-nexus/xml-utils": "*",
     "cassandra-driver": "^4.7.2",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "graphql": "^16.9.0",
     "graphql-tag": "^2.12.6",
     "mongoose": "^8.9.5",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "xmlbuilder2": "^4.0.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

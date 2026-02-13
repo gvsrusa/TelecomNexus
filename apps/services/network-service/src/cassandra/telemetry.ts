@@ -29,6 +29,8 @@ export async function getTelemetry(
 
   while (currentDate <= endDate) {
     const dateStr = formatDate(currentDate);
+    // CQL date column must be bound as LocalDate for the driver to match correctly
+    const localDate = cassandra.types.LocalDate.fromString(dateStr);
 
     const query = `
       SELECT device_id, timestamp, cpu_percent, memory_percent,
@@ -37,7 +39,7 @@ export async function getTelemetry(
       WHERE device_id = ? AND date = ? AND timestamp >= ? AND timestamp <= ?
     `;
 
-    const result = await cassandraClient.execute(query, [deviceId, dateStr, start, end], {
+    const result = await cassandraClient.execute(query, [deviceId, localDate, start, end], {
       prepare: true,
     });
 

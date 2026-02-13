@@ -14,8 +14,6 @@
   "dependencies": {
     "@apollo/server": "^4.11.3",
     "@apollo/subgraph": "^2.9.3",
-    "@telecom-nexus/types": "*",
-    "@telecom-nexus/xml-utils": "*",
     "cassandra-driver": "^4.7.2",
     "cors": "^2.8.5",
     "express": "^4.21.2",
@@ -24,7 +22,8 @@
     "graphql-tag": "^2.12.6",
     "graphql-ws": "^5.16.0",
     "mongoose": "^8.9.5",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "xmlbuilder2": "^4.0.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

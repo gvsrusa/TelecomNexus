@@ -10,7 +10,7 @@ import { typeDefs } from './typeDefs';
 import { resolvers } from './resolvers';
 import { connectCassandra } from './cassandra';
 import { InvoiceModel, PaymentModel } from './models';
-import { generatePaymentReceipt } from '@telecom-nexus/xml-utils';
+import { generatePaymentReceipt } from './lib/receipt';
 
 const PORT = Number(process.env.PORT ?? 4003);
 const MONGO_URI = process.env.MONGO_URI ?? 'mongodb://localhost:27017/telecom_nexus';
@@ -89,9 +89,22 @@ async function main(): Promise<void> {
       }
 
       const xml = generatePaymentReceipt(
-        payment as unknown as Parameters<typeof generatePaymentReceipt>[0],
-        invoice as unknown as Parameters<typeof generatePaymentReceipt>[1],
-        customer as unknown as Parameters<typeof generatePaymentReceipt>[2],
+        {
+          paymentId: payment.paymentId,
+          amount: payment.amount,
+          method: payment.method,
+          transactionRef: payment.transactionRef,
+          processedAt: payment.processedAt,
+        },
+        {
+          invoiceNumber: invoice.invoiceNumber,
+          totalAmount: invoice.totalAmount,
+        },
+        {
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          email: customer.email,
+        },
       );
       res.type('application/xml').send(xml);
     } catch (err) {

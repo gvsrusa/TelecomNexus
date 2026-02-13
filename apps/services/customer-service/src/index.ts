@@ -11,7 +11,7 @@ import mongoose from 'mongoose';
 import { typeDefs } from './typeDefs';
 import { resolvers } from './resolvers';
 import { CustomerModel } from './models';
-import { parseCustomersFromXml, exportCustomersToXml } from '@telecom-nexus/xml-utils';
+import { parseCustomersFromXml, exportCustomersToXml } from './lib/customer-xml';
 
 const PORT = Number(process.env.PORT ?? 4001);
 const MONGO_URI = process.env.MONGO_URI ?? 'mongodb://localhost:27017/telecom_nexus';
@@ -102,9 +102,7 @@ async function main(): Promise<void> {
   app.get('/api/export/customers', async (_req, res) => {
     try {
       const customers = await CustomerModel.find({}).lean();
-      const xml = exportCustomersToXml(
-        customers as unknown as Parameters<typeof exportCustomersToXml>[0],
-      );
+      const xml = exportCustomersToXml(customers as Parameters<typeof exportCustomersToXml>[0]);
       res.type('application/xml').send(xml);
     } catch (err) {
       res.status(500).json({ error: String(err) });
