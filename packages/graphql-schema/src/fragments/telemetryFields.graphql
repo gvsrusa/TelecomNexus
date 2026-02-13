@@ -1,9 +1,0 @@
-fragment TelemetryFields on TelemetryReading {
-  deviceId
-  timestamp
-  cpuPercent
-  memoryPercent
-  bandwidthMbps
-  packetLossPercent
-  temperatureCelsius
-}

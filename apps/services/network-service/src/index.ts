@@ -12,8 +12,8 @@ import { typeDefs } from './typeDefs';
 import { resolvers } from './resolvers';
 import { connectCassandra } from './cassandra';
 import { DeviceModel } from './models';
-import { generateAlertRssFeed } from '@telecom-nexus/xml-utils';
-import { generateSampleDeviceConfig } from '@telecom-nexus/xml-utils';
+import { generateAlertRssFeed } from './lib/rss';
+import { generateSampleDeviceConfig } from './lib/device-config';
 import { getAlerts } from './cassandra';
 
 const PORT = Number(process.env.PORT ?? 4002);
@@ -118,9 +118,7 @@ async function main(): Promise<void> {
       if (device.configXml) {
         res.type('application/xml').send(device.configXml);
       } else {
-        const xml = generateSampleDeviceConfig(
-          device as unknown as Parameters<typeof generateSampleDeviceConfig>[0],
-        );
+        const xml = generateSampleDeviceConfig(device);
         res.type('application/xml').send(xml);
       }
     } catch (err) {

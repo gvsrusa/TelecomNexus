@@ -1,9 +1,0 @@
-fragment AlertFields on Alert {
-  alertId
-  severity
-  title
-  description
-  status
-  timestamp
-  resolvedAt
-}
